@@ -7,18 +7,18 @@ functions to validate the model.
 # SPDX-License-Identifier: BSD-3-Clause
 
 
-import numbers
-import time
-import warnings
 from collections import Counter
 from contextlib import suppress
 from functools import partial
+import numbers
 from numbers import Real
+import time
 from traceback import format_exc
+import warnings
 
+from joblib import logger
 import numpy as np
 import scipy.sparse as sp
-from joblib import logger
 
 # TODO (VALIDATE+TEST): Override imports
 from sklearn.base import clone, is_classifier
@@ -107,9 +107,7 @@ def _mask_labels(estimator, y, train, test):
     if is_clf and is_transductive:
         y_masked[intersect] = -1
     elif is_transductive:
-        raise ValueError(
-            "Transductive learning is only supported for classification for now."
-        )
+        raise ValueError("Transductive learning is only supported for classification for now.")
 
     return y_masked, is_transductive
 
@@ -365,9 +363,7 @@ def cross_validate(
     params = {} if params is None else params
     cv = check_cv(cv, y, classifier=is_classifier(estimator))
 
-    scorers = check_scoring(
-        estimator, scoring=scoring, raise_exc=(error_score == "raise")
-    )
+    scorers = check_scoring(estimator, scoring=scoring, raise_exc=(error_score == "raise"))
 
     if _routing_enabled():
         # For estimators, a MetadataRouter is created in get_metadata_routing
@@ -383,9 +379,7 @@ def cross_validate(
                 estimator=estimator,
                 # TODO(SLEP6): also pass metadata to the predict method for
                 # scoring?
-                method_mapping=MethodMapping()
-                .add(caller="fit", callee="fit")
-                .add(caller="fit", callee="predict"),
+                method_mapping=MethodMapping().add(caller="fit", callee="fit").add(caller="fit", callee="predict"),
             )
             .add(
                 scorer=scorers,
@@ -516,17 +510,14 @@ def _normalize_score_results(scores, scaler_score_key="score"):
 
 
 def _warn_or_raise_about_fit_failures(results, error_score):
-    fit_errors = [
-        result["fit_error"] for result in results if result["fit_error"] is not None
-    ]
+    fit_errors = [result["fit_error"] for result in results if result["fit_error"] is not None]
     if fit_errors:
         num_failed_fits = len(fit_errors)
         num_fits = len(results)
         fit_errors_counter = Counter(fit_errors)
         delimiter = "-" * 80 + "\n"
         fit_errors_summary = "\n".join(
-            f"{delimiter}{n} fits failed with the following error:\n{error}"
-            for error, n in fit_errors_counter.items()
+            f"{delimiter}{n} fits failed with the following error:\n{error}" for error, n in fit_errors_counter.items()
         )
 
         if num_failed_fits == num_fits:
@@ -931,24 +922,16 @@ def _fit_and_score(
         if is_transductive and return_train_score:
             train_labeled = np.setdiff1d(train, test)
 
-            score_params_train = _check_method_params(
-                X, params=score_params, indices=train_labeled
-            )
-            predict_params_train = _check_method_params(
-                X, params=predict_params, indices=train_labeled
-            )
+            score_params_train = _check_method_params(X, params=score_params, indices=train_labeled)
+            predict_params_train = _check_method_params(X, params=predict_params, indices=train_labeled)
 
             X_train = _safe_indexing(X, train_labeled)
             y_train = _safe_indexing(y, train_labeled)
 
             (train_labeled,) = np.nonzero(y_train != -1)
 
-            score_params_train = _check_method_params(
-                X_train, params=score_params_train, indices=train_labeled
-            )
-            predict_params_train = _check_method_params(
-                X_train, params=predict_params_train, indices=train_labeled
-            )
+            score_params_train = _check_method_params(X_train, params=score_params_train, indices=train_labeled)
+            predict_params_train = _check_method_params(X_train, params=predict_params_train, indices=train_labeled)
 
             X_train = _safe_indexing(X_train, train_labeled)
             y_train = _safe_indexing(y_train, train_labeled)
@@ -1005,9 +988,7 @@ def _fit_and_score(
 
 
 # TODO (VALIDATE+TEST): Allow predict_params
-def _score(
-    estimator, X_test, y_test, scorer, score_params, predict_params, error_score="raise"
-):
+def _score(estimator, X_test, y_test, scorer, score_params, predict_params, error_score="raise"):
     """Compute the score(s) of an estimator on a given test set.
 
     Will return a dict of floats if `scorer` is a _MultiMetricScorer, otherwise a single
@@ -1018,13 +999,9 @@ def _score(
 
     try:
         if y_test is None:
-            scores = scorer(
-                estimator, X_test, predict_params=predict_params, **score_params
-            )
+            scores = scorer(estimator, X_test, predict_params=predict_params, **score_params)
         else:
-            scores = scorer(
-                estimator, X_test, y_test, predict_params=predict_params, **score_params
-            )
+            scores = scorer(estimator, X_test, y_test, predict_params=predict_params, **score_params)
     except Exception:
         if isinstance(scorer, _MultimetricScorer):
             # If `_MultimetricScorer` raises exception, the `error_score`
@@ -1046,9 +1023,7 @@ def _score(
 
     # Check non-raised error messages in `_MultimetricScorer`
     if isinstance(scorer, _MultimetricScorer):
-        exception_messages = [
-            (name, str_e) for name, str_e in scores.items() if isinstance(str_e, str)
-        ]
+        exception_messages = [(name, str_e) for name, str_e in scores.items() if isinstance(str_e, str)]
         if exception_messages:
             # error_score != "raise"
             for name, str_e in exception_messages:
@@ -1266,9 +1241,7 @@ def cross_val_predict(
             .add(
                 estimator=estimator,
                 # TODO(SLEP6): also pass metadata for the predict method.
-                method_mapping=MethodMapping()
-                .add(caller="fit", callee="fit")
-                .add(caller="fit", callee="predict"),
+                method_mapping=MethodMapping().add(caller="fit", callee="fit").add(caller="fit", callee="predict"),
             )
         )
         try:
@@ -1307,10 +1280,7 @@ def cross_val_predict(
 
     # If classification methods produce multiple columns of output,
     # we need to manually encode classes to ensure consistent column ordering.
-    encode = (
-        method in ["decision_function", "predict_proba", "predict_log_proba"]
-        and y is not None
-    )
+    encode = method in ["decision_function", "predict_proba", "predict_log_proba"] and y is not None
     if encode:
         y = np.asarray(y)
         if y.ndim == 1:
@@ -1421,10 +1391,7 @@ def _fit_and_predict(estimator, X, y, train, test, fit_params, predict_params, m
     func = getattr(estimator, method)
     predictions = func(X_test, **predict_params)
 
-    encode = (
-        method in ["decision_function", "predict_proba", "predict_log_proba"]
-        and y is not None
-    )
+    encode = method in ["decision_function", "predict_proba", "predict_log_proba"] and y is not None
 
     if encode:
         if isinstance(predictions, list):
@@ -1440,9 +1407,7 @@ def _fit_and_predict(estimator, X, y, train, test, fit_params, predict_params, m
         else:
             # A 2D y array should be a binary label indicator matrix
             n_classes = len(set(y)) if y.ndim == 1 else y.shape[1]
-            predictions = _enforce_prediction_order(
-                estimator.classes_, predictions, n_classes, method
-            )
+            predictions = _enforce_prediction_order(estimator.classes_, predictions, n_classes, method)
     return predictions
 
 
@@ -1460,11 +1425,7 @@ def _enforce_prediction_order(classes, predictions, n_classes, method):
     and `n_classes` is the number of classes in the full training set.
     """
     if n_classes != len(classes):
-        recommendation = (
-            "To fix this, use a cross-validation "
-            "technique resulting in properly "
-            "stratified folds"
-        )
+        recommendation = "To fix this, use a cross-validation " "technique resulting in properly " "stratified folds"
         warnings.warn(
             "Number of classes in training fold ({}) does "
             "not match total number of classes ({}). "
@@ -1491,9 +1452,7 @@ def _enforce_prediction_order(classes, predictions, n_classes, method):
                     "Only {} class/es in training fold, but {} "
                     "in overall dataset. This "
                     "is not supported for decision_function "
-                    "with imbalanced folds. {}".format(
-                        len(classes), n_classes, recommendation
-                    )
+                    "with imbalanced folds. {}".format(len(classes), n_classes, recommendation)
                 )
 
         float_min = np.finfo(predictions.dtype).min
@@ -1738,9 +1697,7 @@ def permutation_test_score(
                 estimator=estimator,
                 # TODO(SLEP6): also pass metadata to the predict method for
                 # scoring?
-                method_mapping=MethodMapping()
-                .add(caller="fit", callee="fit")
-                .add(caller="fit", callee="predict"),
+                method_mapping=MethodMapping().add(caller="fit", callee="fit").add(caller="fit", callee="predict"),
             )
             .add(
                 splitter=cv,
@@ -1816,9 +1773,7 @@ def permutation_test_score(
 
 
 # TODO (VALIDATE+TEST): Allow predict_params
-def _permutation_test_score(
-    estimator, X, y, cv, scorer, split_params, fit_params, predict_params, score_params
-):
+def _permutation_test_score(estimator, X, y, cv, scorer, split_params, fit_params, predict_params, score_params):
     """Auxiliary function for permutation_test_score"""
     # Adjust length of sample weights
     fit_params = fit_params if fit_params is not None else {}
@@ -1831,9 +1786,7 @@ def _permutation_test_score(
         X_train, y_train = _safe_split(estimator, X, y_masked, train)
         X_test, y_test = _safe_split(estimator, X, y, test, train)
         fit_params_train = _check_method_params(X, params=fit_params, indices=train)
-        predict_params_test = _check_method_params(
-            X, params=predict_params, indices=test
-        )
+        predict_params_test = _check_method_params(X, params=predict_params, indices=test)
         score_params_test = _check_method_params(X, params=score_params, indices=test)
         estimator.fit(X_train, y_train, **fit_params_train)
         avg_score.append(
@@ -2082,10 +2035,7 @@ def learning_curve(
     The average test accuracy is 0.93
     """
     if exploit_incremental_learning and not hasattr(estimator, "partial_fit"):
-        raise ValueError(
-            "An estimator must support the partial_fit interface "
-            "to exploit incremental learning"
-        )
+        raise ValueError("An estimator must support the partial_fit interface " "to exploit incremental learning")
 
     params = _check_params_groups_deprecation(fit_params, params, groups, "1.8")
 
@@ -2263,18 +2213,12 @@ def _translate_train_sizes(train_sizes, n_max_training_samples):
             raise ValueError(
                 "train_sizes has been interpreted as fractions "
                 "of the maximum number of training samples and "
-                "must be within (0, 1], but is within [%f, %f]."
-                % (n_min_required_samples, n_max_required_samples)
+                "must be within (0, 1], but is within [%f, %f]." % (n_min_required_samples, n_max_required_samples)
             )
-        train_sizes_abs = (train_sizes_abs * n_max_training_samples).astype(
-            dtype=int, copy=False
-        )
+        train_sizes_abs = (train_sizes_abs * n_max_training_samples).astype(dtype=int, copy=False)
         train_sizes_abs = np.clip(train_sizes_abs, 1, n_max_training_samples)
     else:
-        if (
-            n_min_required_samples <= 0
-            or n_max_required_samples > n_max_training_samples
-        ):
+        if n_min_required_samples <= 0 or n_max_required_samples > n_max_training_samples:
             raise ValueError(
                 "train_sizes has been interpreted as absolute "
                 "numbers of training samples and must be within "
@@ -2334,9 +2278,7 @@ def _incremental_fit_estimator(
         train_subset = train[:n_train_samples]
         y_masked = _mask_labels(estimator, y, train_subset, test)
         X_train, y_train = _safe_split(estimator, X, y_masked, train_subset)
-        X_partial_train, y_partial_train = _safe_split(
-            estimator, X, y_masked, partial_train
-        )
+        X_partial_train, y_partial_train = _safe_split(estimator, X, y_masked, partial_train)
         X_test, y_test = _safe_split(estimator, X, y, test, train_subset)
         start_fit = time.time()
         if y_partial_train is None:
@@ -2373,11 +2315,7 @@ def _incremental_fit_estimator(
         score_time = time.time() - start_score
         score_times.append(score_time)
 
-    ret = (
-        (train_scores, test_scores, fit_times, score_times)
-        if return_times
-        else (train_scores, test_scores)
-    )
+    ret = (train_scores, test_scores, fit_times, score_times) if return_times else (train_scores, test_scores)
 
     return np.array(ret).T
 
@@ -2569,9 +2507,7 @@ def validation_curve(
             MetadataRouter(owner="validation_curve")
             .add(
                 estimator=estimator,
-                method_mapping=MethodMapping()
-                .add(caller="fit", callee="fit")
-                .add(caller="fit", callee="predict"),
+                method_mapping=MethodMapping().add(caller="fit", callee="fit").add(caller="fit", callee="predict"),
             )
             .add(
                 splitter=cv,

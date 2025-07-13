@@ -137,9 +137,7 @@ class BaseKernelEigenAdapter(ClassNamePrefixFeaturesOutMixin, BaseAdapter):
     def _more_tags(self):
         return {
             "pairwise": self.kernel == "precomputed",
-            "_xfail_checks": {
-                "check_transformer_n_iter": "Follows similar implementation to KernelPCA."
-            },
+            "_xfail_checks": {"check_transformer_n_iter": "Follows similar implementation to KernelPCA."},
         }
 
     def _get_kernel(self, X, Y=None):
@@ -147,9 +145,7 @@ class BaseKernelEigenAdapter(ClassNamePrefixFeaturesOutMixin, BaseAdapter):
             params = self.kernel_params or {}
         else:
             params = {"gamma": self.gamma_, "degree": self.degree, "coef0": self.coef0}
-        return pairwise_kernels(
-            X, Y, metric=self.kernel, filter_params=True, n_jobs=self.n_jobs, **params
-        )
+        return pairwise_kernels(X, Y, metric=self.kernel, filter_params=True, n_jobs=self.n_jobs, **params)
 
     def _estimate_n_components(self, K):
         if isinstance(K, (tuple, list)):
@@ -238,13 +234,9 @@ class BaseKernelEigenAdapter(ClassNamePrefixFeaturesOutMixin, BaseAdapter):
             if step == "svd_flip":
                 eigenvectors, _ = svd_flip(eigenvectors, None)
             if step == "sort_eigencomponents":
-                eigenvalues, eigenvectors = sort_eigencomponents(
-                    eigenvalues, eigenvectors
-                )
+                eigenvalues, eigenvectors = sort_eigencomponents(eigenvalues, eigenvectors)
             if step == "remove_zero_eigencomponents":
-                eigenvalues, eigenvectors = self._remove_zero_eigencomponents(
-                    eigenvalues, eigenvectors
-                )
+                eigenvalues, eigenvectors = self._remove_zero_eigencomponents(eigenvalues, eigenvectors)
 
         return eigenvalues, eigenvectors
 
@@ -317,12 +309,8 @@ class BaseKernelEigenAdapter(ClassNamePrefixFeaturesOutMixin, BaseAdapter):
         self.fit_has_domains_ = domains is not None
         self.fit_has_covs_ = covariates is not None
 
-        domains = self._validate_domains(
-            domains, X, required=self.requires_domains_, copy=self.copy
-        )
-        covariates = self._validate_covariates(
-            covariates, X, required=self.requires_covs_, copy=self.copy
-        )
+        domains = self._validate_domains(domains, X, required=self.requires_domains_, copy=self.copy)
+        covariates = self._validate_covariates(covariates, X, required=self.requires_covs_, copy=self.copy)
 
         X = self._augment(X, domains, covariates) if self.augment else X
         self.X_fit_ = X
@@ -344,9 +332,7 @@ class BaseKernelEigenAdapter(ClassNamePrefixFeaturesOutMixin, BaseAdapter):
         accept_sparse = False if self.fit_inverse_transform else "csr"
         X = validate_data(self, X, accept_sparse=accept_sparse, reset=False)
         domains = self._validate_domains(domains, X, False, self.requires_domains_)
-        covariates = self._validate_covariates(
-            covariates, X, False, self.requires_covs_
-        )
+        covariates = self._validate_covariates(covariates, X, False, self.requires_covs_)
 
         X = self._augment(X, domains, covariates) if self.augment else X
         K = self._get_kernel(X, self.X_fit_)
@@ -525,7 +511,7 @@ class TCA(BaseKernelEigenAdapter):
         #       two domains, which is the source and target domains.
 
         # Identity matrix
-        I = np.eye(K.shape[0])
+        I = np.eye(K.shape[0])  # noqa: E741
         # Centering matrix
         H = centering_kernel(K.shape[0], K.dtype)
 

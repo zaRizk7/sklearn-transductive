@@ -1,9 +1,4 @@
-__all__ = [
-    "estimator_has",
-    "subestimator_has",
-    "estimator_attr_true",
-    "map_estimator_method",
-]
+__all__ = ["estimator_has", "subestimator_has", "estimator_attr_true"]
 
 
 def estimator_has(attr, ensure_all=False):

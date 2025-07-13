@@ -8,7 +8,7 @@ __all__ = [
 
 
 def centering_kernel(n, dtype=np.float64):
-    I = np.eye(n, dtype=dtype)
+    I = np.eye(n, dtype=dtype)  # noqa: E741
     J = np.ones((n, n), dtype)
     return I - J / n
 

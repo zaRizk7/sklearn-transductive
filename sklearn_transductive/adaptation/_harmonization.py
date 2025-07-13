@@ -252,9 +252,7 @@ class ComBat(OneToOneFeatureMixin, BaseAdapter):
     def fit(self, X, y=None, domains=None, covariates=None):
         # Validate (and cast) input data
         X = validate_data(self, X, copy=self.copy)
-        domains, domains_ohe = self._validate_domains(
-            domains, X, required=True, return_value="both"
-        )
+        domains, domains_ohe = self._validate_domains(domains, X, required=True, return_value="both")
         covariates = self._validate_covariates(covariates, X, copy=self.copy)
         self.requires_cov_ = covariates is not None
 
@@ -301,9 +299,7 @@ class ComBat(OneToOneFeatureMixin, BaseAdapter):
             return_value="both",
             copy=self.copy,
         )
-        covariates = self._validate_covariates(
-            covariates, X, required=self.requires_cov_, copy=self.copy
-        )
+        covariates = self._validate_covariates(covariates, X, required=self.requires_cov_, copy=self.copy)
 
         # Make design matrix
         D = self._augment(domains=domains_ohe, covariates=covariates)

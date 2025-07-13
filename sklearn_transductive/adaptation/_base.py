@@ -26,7 +26,7 @@ class AdapterMixin(DomainValidationMixin, CovariateValidationMixin, _SetOutputMi
         y :  array-like of shape (n_samples,) or (n_samples, n_outputs), \
                 default=None
             Target values (None for unsupervised transformations).
-            
+
         domains : array-like of shape (n_samples,), default=None
             Group labels where the samples are sourced from.
 
@@ -53,9 +53,7 @@ class AdapterMixin(DomainValidationMixin, CovariateValidationMixin, _SetOutputMi
         # For that, we calculate routing and check if anything would be routed
         # to `transform` if we were to route them.
         if _routing_enabled():
-            transform_params = self.get_metadata_routing().consumes(
-                method="transform", params=fit_params.keys()
-            )
+            transform_params = self.get_metadata_routing().consumes(method="transform", params=fit_params.keys())
             if transform_params:
                 warnings.warn(
                     (
@@ -88,7 +86,7 @@ class BaseAdapter(AdapterMixin, BaseEstimator):
     __metadata_request__inverse_transform = {"domains": True, "covariates": True}
 
     def _augment(self, X=None, domains=None, covariates=None):
-        fn = lambda item: item is not None
+        fn = lambda item: item is not None  # noqa: E731
         A = tuple(filter(fn, (X, domains, covariates)))
 
         if len(A) > 0:

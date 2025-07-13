@@ -74,9 +74,7 @@ class DomainValidationMixin:
 
 
 class CovariateValidationMixin:
-    def _validate_covariates(
-        self, covariates, X, reset=True, required=False, **check_params
-    ):
+    def _validate_covariates(self, covariates, X, reset=True, required=False, **check_params):
         _check_required(covariates, required, "covariates")
 
         if covariates is not None:

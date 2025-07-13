@@ -16,7 +16,7 @@ from sklearn.utils.validation import (
     validate_data,
 )
 
-from ..utils.metaestimators import subestimator_has
+from ..utils.metaestimators import subestimator_has  # type: ignore[misc]
 
 __all__ = ["SemiSupervisedEstimator"]
 

@@ -16,16 +16,16 @@ ground truth labeling (or ``None`` in the case of unsupervised models).
 # Authors: The scikit-learn developers
 # SPDX-License-Identifier: BSD-3-Clause
 
-import copy
-import warnings
 from collections import Counter
+import copy
 from functools import partial
 from inspect import signature
 from numbers import Integral
 from traceback import format_exc
+import warnings
 
-import numpy as np
 from imblearn.metrics import specificity_score
+import numpy as np
 
 # TODO (VALIDATE+TEST): Override imports
 from sklearn.base import is_classifier, is_regressor
@@ -95,9 +95,7 @@ def _cached_call(cache, estimator, response_method, *args, **kwargs):
     if cache is not None and response_method in cache:
         return cache[response_method]
 
-    result, _ = _get_response_values(
-        estimator, *args, response_method=response_method, **kwargs
-    )
+    result, _ = _get_response_values(estimator, *args, response_method=response_method, **kwargs)
 
     if cache is not None:
         cache[response_method] = result
@@ -140,9 +138,7 @@ class _MultimetricScorer:
             routed_params = process_routing(self, "score", **kwargs)
         else:
             # they all get the same args, and they all get them all
-            routed_params = Bunch(
-                **{name: Bunch(score=kwargs) for name in self._scorers}
-            )
+            routed_params = Bunch(**{name: Bunch(score=kwargs) for name in self._scorers})
 
         for name, scorer in self._scorers.items():
             try:
@@ -256,14 +252,9 @@ class _BaseScorer(_MetadataRequester):
         response_method_string = f", response_method={self._response_method!r}"
         kwargs_string = "".join([f", {k}={v}" for k, v in self._kwargs.items()])
 
-        return (
-            f"make_scorer({self._score_func.__name__}{sign_string}"
-            f"{response_method_string}{kwargs_string})"
-        )
+        return f"make_scorer({self._score_func.__name__}{sign_string}" f"{response_method_string}{kwargs_string})"
 
-    def __call__(
-        self, estimator, X, y_true, sample_weight=None, predict_params=None, **kwargs
-    ):
+    def __call__(self, estimator, X, y_true, sample_weight=None, predict_params=None, **kwargs):
         """Evaluate predicted target values for X relative to y_true.
 
         Parameters
@@ -297,9 +288,7 @@ class _BaseScorer(_MetadataRequester):
         """
         # TODO (1.8): remove in 1.8 (scoring="max_error" has been deprecated in 1.6)
         if self._deprecation_msg is not None:
-            warnings.warn(
-                self._deprecation_msg, category=DeprecationWarning, stacklevel=2
-            )
+            warnings.warn(self._deprecation_msg, category=DeprecationWarning, stacklevel=2)
 
         _raise_for_params(kwargs, self, None)
 
@@ -327,9 +316,7 @@ class _BaseScorer(_MetadataRequester):
         _kwargs = set() if self._kwargs is None else set(self._kwargs.keys())
         overlap = _kwargs.intersection(kwargs.keys())
         if overlap:
-            warnings.warn(
-                f"{message} Overlapping parameters are: {overlap}", UserWarning
-            )
+            warnings.warn(f"{message} Overlapping parameters are: {overlap}", UserWarning)
 
     def set_score_request(self, **kwargs):
         """Set requested parameters by the scorer.
@@ -369,9 +356,7 @@ class _BaseScorer(_MetadataRequester):
 
 # TODO (VALIDATE+TEST): Override to allow predict_params
 class _Scorer(_BaseScorer):
-    def _score(
-        self, method_caller, estimator, X, y_true, predict_params=None, **kwargs
-    ):
+    def _score(self, method_caller, estimator, X, y_true, predict_params=None, **kwargs):
         """Evaluate the response method of `estimator` on `X` and `y_true`.
 
         Parameters
@@ -589,19 +574,14 @@ def _check_multimetric_scoring(estimator, scoring):
     )
 
     if isinstance(scoring, (list, tuple, set)):
-        err_msg = (
-            "The list/tuple elements must be unique strings of predefined scorers. "
-        )
+        err_msg = "The list/tuple elements must be unique strings of predefined scorers. "
         try:
             keys = set(scoring)
         except TypeError as e:
             raise ValueError(err_msg) from e
 
         if len(keys) != len(scoring):
-            raise ValueError(
-                f"{err_msg} Duplicate elements were found in"
-                f" the given list. {scoring!r}"
-            )
+            raise ValueError(f"{err_msg} Duplicate elements were found in" f" the given list. {scoring!r}")
         elif len(keys) > 0:
             if not all(isinstance(k, str) for k in keys):
                 if any(callable(k) for k in keys):
@@ -612,29 +592,18 @@ def _check_multimetric_scoring(estimator, scoring):
                         f"Got {scoring!r}"
                     )
                 else:
-                    raise ValueError(
-                        f"{err_msg} Non-string types were found "
-                        f"in the given list. Got {scoring!r}"
-                    )
-            scorers = {
-                scorer: check_scoring(estimator, scoring=scorer) for scorer in scoring
-            }
+                    raise ValueError(f"{err_msg} Non-string types were found " f"in the given list. Got {scoring!r}")
+            scorers = {scorer: check_scoring(estimator, scoring=scorer) for scorer in scoring}
         else:
             raise ValueError(f"{err_msg} Empty list was given. {scoring!r}")
 
     elif isinstance(scoring, dict):
         keys = set(scoring)
         if not all(isinstance(k, str) for k in keys):
-            raise ValueError(
-                "Non-string types were found in the keys of "
-                f"the given dict. scoring={scoring!r}"
-            )
+            raise ValueError("Non-string types were found in the keys of " f"the given dict. scoring={scoring!r}")
         if len(keys) == 0:
             raise ValueError(f"An empty dict was passed. {scoring!r}")
-        scorers = {
-            key: check_scoring(estimator, scoring=scorer)
-            for key, scorer in scoring.items()
-        }
+        scorers = {key: check_scoring(estimator, scoring=scorer) for key, scorer in scoring.items()}
     else:
         raise ValueError(err_msg_generic)
 
@@ -662,9 +631,7 @@ def _get_response_method_name(response_method):
     },
     prefer_skip_nested_validation=True,
 )
-def make_scorer(
-    score_func, *, response_method="default", greater_is_better=True, **kwargs
-):
+def make_scorer(score_func, *, response_method="default", greater_is_better=True, **kwargs):
     """Make a scorer from a performance metric or loss function.
 
     A scorer is a wrapper around an arbitrary metric or loss function that is called
@@ -749,37 +716,19 @@ neg_max_error_scorer = make_scorer(max_error, greater_is_better=False)
 max_error_scorer = make_scorer(max_error, greater_is_better=False)
 # TODO (1.8): remove in 1.8 (scoring="max_error" has been deprecated in 1.6)
 deprecation_msg = (
-    "Scoring method max_error was renamed to "
-    "neg_max_error in version 1.6 and will "
-    "be removed in 1.8."
+    "Scoring method max_error was renamed to " "neg_max_error in version 1.6 and will " "be removed in 1.8."
 )
 max_error_scorer._deprecation_msg = deprecation_msg
 neg_mean_squared_error_scorer = make_scorer(mean_squared_error, greater_is_better=False)
-neg_mean_squared_log_error_scorer = make_scorer(
-    mean_squared_log_error, greater_is_better=False
-)
-neg_mean_absolute_error_scorer = make_scorer(
-    mean_absolute_error, greater_is_better=False
-)
-neg_mean_absolute_percentage_error_scorer = make_scorer(
-    mean_absolute_percentage_error, greater_is_better=False
-)
-neg_median_absolute_error_scorer = make_scorer(
-    median_absolute_error, greater_is_better=False
-)
-neg_root_mean_squared_error_scorer = make_scorer(
-    root_mean_squared_error, greater_is_better=False
-)
-neg_root_mean_squared_log_error_scorer = make_scorer(
-    root_mean_squared_log_error, greater_is_better=False
-)
-neg_mean_poisson_deviance_scorer = make_scorer(
-    mean_poisson_deviance, greater_is_better=False
-)
+neg_mean_squared_log_error_scorer = make_scorer(mean_squared_log_error, greater_is_better=False)
+neg_mean_absolute_error_scorer = make_scorer(mean_absolute_error, greater_is_better=False)
+neg_mean_absolute_percentage_error_scorer = make_scorer(mean_absolute_percentage_error, greater_is_better=False)
+neg_median_absolute_error_scorer = make_scorer(median_absolute_error, greater_is_better=False)
+neg_root_mean_squared_error_scorer = make_scorer(root_mean_squared_error, greater_is_better=False)
+neg_root_mean_squared_log_error_scorer = make_scorer(root_mean_squared_log_error, greater_is_better=False)
+neg_mean_poisson_deviance_scorer = make_scorer(mean_poisson_deviance, greater_is_better=False)
 
-neg_mean_gamma_deviance_scorer = make_scorer(
-    mean_gamma_deviance, greater_is_better=False
-)
+neg_mean_gamma_deviance_scorer = make_scorer(mean_gamma_deviance, greater_is_better=False)
 d2_absolute_error_scorer = make_scorer(d2_absolute_error_score)
 
 # Standard Classification Scores
@@ -797,9 +746,7 @@ def negative_likelihood_ratio(y_true, y_pred):
 
 
 positive_likelihood_ratio_scorer = make_scorer(positive_likelihood_ratio)
-neg_negative_likelihood_ratio_scorer = make_scorer(
-    negative_likelihood_ratio, greater_is_better=False
-)
+neg_negative_likelihood_ratio_scorer = make_scorer(negative_likelihood_ratio, greater_is_better=False)
 
 # Score functions that need decision values
 top_k_accuracy_scorer = make_scorer(
@@ -816,18 +763,14 @@ average_precision_scorer = make_scorer(
     average_precision_score,
     response_method=("decision_function", "predict_proba"),
 )
-roc_auc_ovo_scorer = make_scorer(
-    roc_auc_score, response_method="predict_proba", multi_class="ovo"
-)
+roc_auc_ovo_scorer = make_scorer(roc_auc_score, response_method="predict_proba", multi_class="ovo")
 roc_auc_ovo_weighted_scorer = make_scorer(
     roc_auc_score,
     response_method="predict_proba",
     multi_class="ovo",
     average="weighted",
 )
-roc_auc_ovr_scorer = make_scorer(
-    roc_auc_score, response_method="predict_proba", multi_class="ovr"
-)
+roc_auc_ovr_scorer = make_scorer(roc_auc_score, response_method="predict_proba", multi_class="ovr")
 roc_auc_ovr_weighted_scorer = make_scorer(
     roc_auc_score,
     response_method="predict_proba",
@@ -836,15 +779,9 @@ roc_auc_ovr_weighted_scorer = make_scorer(
 )
 
 # Score function for probabilistic classification
-neg_log_loss_scorer = make_scorer(
-    log_loss, greater_is_better=False, response_method="predict_proba"
-)
-neg_brier_score_scorer = make_scorer(
-    brier_score_loss, greater_is_better=False, response_method="predict_proba"
-)
-brier_score_loss_scorer = make_scorer(
-    brier_score_loss, greater_is_better=False, response_method="predict_proba"
-)
+neg_log_loss_scorer = make_scorer(log_loss, greater_is_better=False, response_method="predict_proba")
+neg_brier_score_scorer = make_scorer(brier_score_loss, greater_is_better=False, response_method="predict_proba")
+brier_score_loss_scorer = make_scorer(brier_score_loss, greater_is_better=False, response_method="predict_proba")
 
 
 # Clustering scores
@@ -1131,9 +1068,7 @@ class _CurveScorer(_BaseScorer):
         instance._metadata_request = scorer._get_metadata_request()
         return instance
 
-    def _score(
-        self, method_caller, estimator, X, y_true, predict_params=None, **kwargs
-    ):
+    def _score(self, method_caller, estimator, X, y_true, predict_params=None, **kwargs):
         """Evaluate predicted target values for X relative to y_true.
 
         Parameters
@@ -1175,18 +1110,14 @@ class _CurveScorer(_BaseScorer):
 
         scoring_kwargs = {**self._kwargs, **kwargs}
         if isinstance(self._thresholds, Integral):
-            potential_thresholds = np.linspace(
-                np.min(y_score), np.max(y_score), self._thresholds
-            )
+            potential_thresholds = np.linspace(np.min(y_score), np.max(y_score), self._thresholds)
         else:
             potential_thresholds = np.asarray(self._thresholds)
         score_thresholds = [
             self._sign
             * self._score_func(
                 y_true,
-                _threshold_scores_to_class_labels(
-                    y_score, th, estimator.classes_, pos_label
-                ),
+                _threshold_scores_to_class_labels(y_score, th, estimator.classes_, pos_label),
                 **scoring_kwargs,
             )
             for th in potential_thresholds

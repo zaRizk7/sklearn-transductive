@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import warnings
 from collections.abc import Callable, Iterable, Mapping
 from logging import DEBUG, INFO, WARNING
 from numbers import Integral, Number
 from time import time
 from typing import Any, List, Union
+import warnings
 
 import numpy as np
 from optuna import TrialPruned, distributions, logging, samplers
@@ -21,8 +21,8 @@ from optuna.trial import FrozenTrial, Trial
 with try_import() as _imports:
     import pandas as pd
     import scipy as sp
-    import sklearn
     from scipy.sparse import spmatrix
+    import sklearn
     from sklearn.base import BaseEstimator, clone, is_classifier
     from sklearn.model_selection import BaseCrossValidator, check_cv
     from sklearn.utils import _safe_indexing as sklearn_safe_indexing
@@ -55,9 +55,7 @@ IndexableType = Union[Iterable, None]
 _logger = logging.get_logger(__name__)
 
 
-def _check_fit_params(
-    X: TwoDimArrayLikeType, fit_params: dict, indices: OneDimArrayLikeType
-) -> dict:
+def _check_fit_params(X: TwoDimArrayLikeType, fit_params: dict, indices: OneDimArrayLikeType) -> dict:
     fit_params_validated = {}
     for key, value in fit_params.items():
         # NOTE Original implementation:
@@ -70,9 +68,7 @@ def _check_fit_params(
             fit_params_validated[key] = value
         else:
             fit_params_validated[key] = _make_indexable(value)
-            fit_params_validated[key] = _safe_indexing(
-                fit_params_validated[key], indices
-            )
+            fit_params_validated[key] = _safe_indexing(fit_params_validated[key], indices)
     return fit_params_validated
 
 
@@ -248,10 +244,7 @@ class _Objective:
                 n_splits = self.cv.get_n_splits(self.X, self.y, self.groups)
                 fit_time = np.array([np.nan] * n_splits)
                 score_time = np.array([np.nan] * n_splits)
-                test_score = np.array(
-                    [self.error_score if self.error_score is not None else np.nan]
-                    * n_splits
-                )
+                test_score = np.array([self.error_score if self.error_score is not None else np.nan] * n_splits)
 
                 scores = {
                     "fit_time": fit_time,
@@ -262,15 +255,11 @@ class _Objective:
         self._store_scores(trial, scores)
 
         test_scores = scores["test_score"]
-        scores_list = (
-            test_scores if isinstance(test_scores, list) else list(test_scores.tolist())
-        )
+        scores_list = test_scores if isinstance(test_scores, list) else list(test_scores.tolist())
         try:
             report_cross_validation_scores(trial, scores_list)
         except ValueError as e:
-            warn_msg = (
-                "Failed to report cross validation scores for TerminatorCallback, with error: {}"
-            ).format(e)
+            warn_msg = ("Failed to report cross validation scores for TerminatorCallback, with error: {}").format(e)
             warnings.warn(warn_msg)
 
         return trial.user_attrs["mean_test_score"]
@@ -303,14 +292,10 @@ class _Objective:
             scores["train_score"] = np.empty(n_splits)
 
         for step in range(self.max_iter):
-            for i, (train, test) in enumerate(
-                self.cv.split(self.X, self.y, groups=self.groups)
-            ):
+            for i, (train, test) in enumerate(self.cv.split(self.X, self.y, groups=self.groups)):
                 out = list(
                     np.asarray(
-                        self._partial_fit_and_score(
-                            estimators[i], train, test, partial_fit_params
-                        ),
+                        self._partial_fit_and_score(estimators[i], train, test, partial_fit_params),
                         dtype=float,
                     ).tolist()
                 )
@@ -341,16 +326,11 @@ class _Objective:
             index = trial.suggest_int("param_group", 0, len(param_distributions) - 1)
             param_distributions = param_distributions[index]
             return {
-                name: trial._suggest(
-                    "__".join((f"group_{index:0=4d}", name)), distribution
-                )
+                name: trial._suggest("__".join((f"group_{index:0=4d}", name)), distribution)
                 for name, distribution in param_distributions.items()
             }
 
-        return {
-            name: trial._suggest(name, distribution)
-            for name, distribution in param_distributions.items()
-        }
+        return {name: trial._suggest(name, distribution) for name, distribution in param_distributions.items()}
 
     def _partial_fit_and_score(
         self,
@@ -360,9 +340,7 @@ class _Objective:
         partial_fit_params: dict[str, Any],
     ) -> list[Number]:
         X_train, y_train = _safe_split(estimator, self.X, self.y, train)
-        X_test, y_test = _safe_split(
-            estimator, self.X, self.y, test, train_indices=train
-        )
+        X_test, y_test = _safe_split(estimator, self.X, self.y, test, train_indices=train)
 
         start_time = time()
 
@@ -403,9 +381,7 @@ class _Objective:
 
         return ret
 
-    def _store_scores(
-        self, trial: Trial, scores: Mapping[str, OneDimArrayLikeType]
-    ) -> None:
+    def _store_scores(self, trial: Trial, scores: Mapping[str, OneDimArrayLikeType]) -> None:
         for name, array in scores.items():
             if name in ["test_score", "train_score"]:
                 for i, score in enumerate(array):
@@ -621,8 +597,7 @@ class OptunaSearchCV(BaseEstimator):
             cv_results_list_in_dict = {}
         else:
             cv_results_list_in_dict = {
-                key: [dict_[key] for dict_ in cv_results_dict_in_list]
-                for key in cv_results_dict_in_list[0]
+                key: [dict_[key] for dict_ in cv_results_dict_in_list] for key in cv_results_dict_in_list[0]
             }
         return cv_results_list_in_dict
 
@@ -664,9 +639,7 @@ class OptunaSearchCV(BaseEstimator):
         router.add(estimator=self.estimator, method_mapping=mapper)
         return router
 
-    def decision_function(
-        self, X: TwoDimArrayLikeType, **kwargs: Any
-    ) -> OneDimArrayLikeType | TwoDimArrayLikeType:
+    def decision_function(self, X: TwoDimArrayLikeType, **kwargs: Any) -> OneDimArrayLikeType | TwoDimArrayLikeType:
         """Call ``decision_function`` on the best estimator.
 
         This is available only if the underlying estimator supports
@@ -677,9 +650,7 @@ class OptunaSearchCV(BaseEstimator):
 
         return self.best_estimator_.decision_function(X, **kwargs)
 
-    def inverse_transform(
-        self, X: TwoDimArrayLikeType, *args: Any, **kwargs: Any
-    ) -> TwoDimArrayLikeType:
+    def inverse_transform(self, X: TwoDimArrayLikeType, *args: Any, **kwargs: Any) -> TwoDimArrayLikeType:
         """Call ``inverse_transform`` on the best estimator.
 
         This is available only if the underlying estimator supports
@@ -692,9 +663,7 @@ class OptunaSearchCV(BaseEstimator):
 
         return self.best_estimator_.inverse_transform(X, *args, **kwargs)
 
-    def predict(
-        self, X: TwoDimArrayLikeType, **kwargs: Any
-    ) -> OneDimArrayLikeType | TwoDimArrayLikeType:
+    def predict(self, X: TwoDimArrayLikeType, **kwargs: Any) -> OneDimArrayLikeType | TwoDimArrayLikeType:
         """Call ``predict`` on the best estimator.
 
         This is available only if the underlying estimator supports ``predict``
@@ -705,9 +674,7 @@ class OptunaSearchCV(BaseEstimator):
 
         return self.best_estimator_.predict(X, **kwargs)
 
-    def predict_log_proba(
-        self, X: TwoDimArrayLikeType, **kwargs: Any
-    ) -> TwoDimArrayLikeType:
+    def predict_log_proba(self, X: TwoDimArrayLikeType, **kwargs: Any) -> TwoDimArrayLikeType:
         """Call ``predict_log_proba`` on the best estimator.
 
         This is available only if the underlying estimator supports
@@ -718,9 +685,7 @@ class OptunaSearchCV(BaseEstimator):
 
         return self.best_estimator_.predict_log_proba(X, **kwargs)
 
-    def predict_proba(
-        self, X: TwoDimArrayLikeType, **kwargs: Any
-    ) -> TwoDimArrayLikeType:
+    def predict_proba(self, X: TwoDimArrayLikeType, **kwargs: Any) -> TwoDimArrayLikeType:
         """Call ``predict_proba`` on the best estimator.
 
         This is available only if the underlying estimator supports
@@ -751,9 +716,7 @@ class OptunaSearchCV(BaseEstimator):
 
         return self.study_.set_user_attr
 
-    def transform(
-        self, X: TwoDimArrayLikeType, *args: Any, **kwargs: Any
-    ) -> TwoDimArrayLikeType:
+    def transform(self, X: TwoDimArrayLikeType, *args: Any, **kwargs: Any) -> TwoDimArrayLikeType:
         """Call ``transform`` on the best estimator.
 
         This is available only if the underlying estimator supports
@@ -794,17 +757,13 @@ class OptunaSearchCV(BaseEstimator):
         subsample: float | int = 1.0,
         timeout: float | None = None,
         verbose: int = 0,
-        callbacks: (
-            list[Callable[[study_module.Study, FrozenTrial], None]] | None
-        ) = None,
+        callbacks: list[Callable[[study_module.Study, FrozenTrial], None]] | None = None,
         catch: Iterable[type[Exception]] | type[Exception] = (),
     ) -> None:
         _imports.check()
 
         if not isinstance(param_distributions, (Mapping, list)):
-            raise TypeError(
-                "param_distributions must be a mapping or a list of mapping."
-            )
+            raise TypeError("param_distributions must be a mapping or a list of mapping.")
 
         if isinstance(param_distributions, list):
             for i, param_distribution in enumerate(param_distributions):
@@ -838,9 +797,7 @@ class OptunaSearchCV(BaseEstimator):
         self.n_trials = n_trials
         self.n_jobs = n_jobs if n_jobs else 1
         self.param_distributions = (
-            param_distributions
-            if isinstance(param_distributions, (dict, list))
-            else dict(param_distributions)
+            param_distributions if isinstance(param_distributions, (dict, list)) else dict(param_distributions)
         )
         self.random_state = random_state
         self.refit = refit
@@ -869,16 +826,12 @@ class OptunaSearchCV(BaseEstimator):
 
             for name, distribution in self.param_distributions.items():
                 if not isinstance(distribution, distributions.BaseDistribution):
-                    raise ValueError(
-                        "Value of {} must be a optuna distribution.".format(name)
-                    )
+                    raise ValueError("Value of {} must be a optuna distribution.".format(name))
         else:
             for param_distributions in self.param_distributions:
                 for name, distribution in param_distributions.items():
                     if not isinstance(distribution, distributions.BaseDistribution):
-                        raise ValueError(
-                            "Value of {} must be a optuna distribution.".format(name)
-                        )
+                        raise ValueError("Value of {} must be a optuna distribution.".format(name))
 
         if self.enable_pruning and not hasattr(self.estimator, "partial_fit"):
             raise ValueError("estimator must support partial_fit.")
@@ -921,9 +874,7 @@ class OptunaSearchCV(BaseEstimator):
             best_params = self.study_.best_params
             if "param_group" in best_params:
                 best_params.pop("param_group")
-                best_params = {
-                    "__".join(k.split("__")[1:]): v for k, v in best_params.items()
-                }
+                best_params = {"__".join(k.split("__")[1:]): v for k, v in best_params.items()}
 
             self.best_estimator_.set_params(**best_params)
         except ValueError as e:
@@ -937,9 +888,7 @@ class OptunaSearchCV(BaseEstimator):
 
         self.refit_time_ = time() - start_time
 
-        _logger.info(
-            "Finished refitting! (elapsed time: {:.3f} sec.)".format(self.refit_time_)
-        )
+        _logger.info("Finished refitting! (elapsed time: {:.3f} sec.)".format(self.refit_time_))
 
         return self
 
@@ -990,9 +939,7 @@ class OptunaSearchCV(BaseEstimator):
             max_samples = int(max_samples * n_samples)
 
         if max_samples < n_samples:
-            self.sample_indices_ = random_state.choice(
-                self.sample_indices_, max_samples, replace=False
-            )
+            self.sample_indices_ = random_state.choice(self.sample_indices_, max_samples, replace=False)
 
             self.sample_indices_.sort()
 
@@ -1014,9 +961,7 @@ class OptunaSearchCV(BaseEstimator):
             seed = random_state.randint(0, np.iinfo("int32").max)
             sampler = samplers.TPESampler(seed=seed)
 
-            self.study_ = study_module.create_study(
-                direction="maximize", sampler=sampler
-            )
+            self.study_ = study_module.create_study(direction="maximize", sampler=sampler)
 
         else:
             self.study_ = self.study
@@ -1037,8 +982,7 @@ class OptunaSearchCV(BaseEstimator):
         )
 
         _logger.info(
-            "Searching the best hyperparameters using {} "
-            "samples...".format(_num_samples(self.sample_indices_))
+            "Searching the best hyperparameters using {} " "samples...".format(_num_samples(self.sample_indices_))
         )
 
         self.study_.optimize(
