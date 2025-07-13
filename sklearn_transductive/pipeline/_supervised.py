@@ -18,14 +18,14 @@ from sklearn.utils.validation import (
 
 from ..utils.metaestimators import subestimator_has  # type: ignore[misc]
 
-__all__ = ["SemiSupervisedEstimator"]
+__all__ = ["SupervisedOnlyEstimator"]
 
 
 # Just used for ignoring unlabeled data with -1 labels
 # One example is to compose multiple estimators that may have
 # unlabeled data in the middle of the pipeline with a transformation
 # that may have transductive properties.
-class SemiSupervisedEstimator(BaseEstimator):
+class SupervisedOnlyEstimator(BaseEstimator):
     _parameter_constraints: dict = {"estimator": [HasMethods(["fit"])]}
 
     def __init__(self, estimator=FunctionTransformer()):
