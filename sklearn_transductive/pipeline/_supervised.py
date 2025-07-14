@@ -57,6 +57,8 @@ class SupervisedOnlyEstimator(BaseEstimator):
         mapper.add(caller="predict_proba", callee="predict_proba")
         mapper.add(caller="predict_log_proba", callee="predict_log_proba")
         mapper.add(caller="decision_function", callee="decision_function")
+        mapper.add(caller="score", callee="score")
+        mapper.add(caller="score_samples", callee="score_samples")
         router.add(estimator=self.estimator, method_mapping=mapper)
         return router
 
@@ -131,3 +133,17 @@ class SupervisedOnlyEstimator(BaseEstimator):
         routed_params = self._process_routing(params, "decision_function")
         X = validate_data(self, X, accept_sparse=True, reset=False)
         return self.estimator.decision_function(X, **routed_params)
+
+    @available_if(subestimator_has("estimator", "score"))
+    def score(self, X, y=None, **params):
+        check_is_fitted(self)
+        routed_params = self._process_routing(params, "score")
+        X, y = validate_data(self, X, y, accept_sparse=True, reset=False)
+        return self.estimator.score(X, y, **routed_params)
+
+    @available_if(subestimator_has("estimator", "score_samples"))
+    def score_samples(self, X, **params):
+        check_is_fitted(self)
+        routed_params = self._process_routing(params, "score_samples")
+        X = validate_data(self, X, accept_sparse=True, reset=False)
+        return self.estimator.score_samples(X, **routed_params)
