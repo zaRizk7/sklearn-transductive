@@ -1,6 +1,5 @@
-import numpy as np
 from sklearn.preprocessing import OneHotEncoder
-from sklearn.utils import check_array, check_consistent_length, safe_mask
+from sklearn.utils import check_array, check_consistent_length
 from sklearn.utils.validation import _num_features
 
 __all__ = ["DomainValidationMixin", "CovariateValidationMixin"]
