@@ -21,24 +21,25 @@ __all__ = ["ComBat"]
 
 
 def _estimate_priors(gamma_hat, delta_hat):
-    """
+    """Estimate empirical Bayes priors for the ComBat model.
+
     Parameters
     ----------
-    gamma_hat : ndarray of shape (n, m)
-        Array containing gamma_hat values.
-    delta_hat : ndarray of shape (n, m)
-        Array containing delta_hat values.
+    gamma_hat : ndarray of shape (n_domains, n_features)
+        Least-squares estimates of the domain-specific location parameters.
+    delta_hat : ndarray of shape (n_domains, n_features)
+        Least-squares estimates of the domain-specific scale parameters.
 
     Returns
     -------
-    gamma_bar : ndarray of shape (n,)
-        Array containing the mean of gamma_hat along axis 1.
-    tau_sq : ndarray of shape (n,)
-        Array containing the variance of gamma_hat along axis 1.
-    a_prior : ndarray of shape (n,)
-        Array containing the prior values for a_prior.
-    b_prior : ndarray of shape (n,)
-        Array containing the prior values for b_prior.
+    gamma_bar : ndarray of shape (n_domains,)
+        Mean of ``gamma_hat`` across domains.
+    tau_sq : ndarray of shape (n_domains,)
+        Variance of ``gamma_hat`` across domains.
+    a_prior : ndarray of shape (n_domains,)
+        Shape parameters of the inverse-gamma prior.
+    b_prior : ndarray of shape (n_domains,)
+        Scale parameters of the inverse-gamma prior.
     """
 
     gamma_bar = gamma_hat.mean(1)
@@ -54,27 +55,25 @@ def _estimate_priors(gamma_hat, delta_hat):
 
 
 def _postmean(gamma_hat, gamma_bar, n, delta_star, tau_2):
-    """
-    Calculate the posterior mean using the given parameters.
+    """Compute the posterior mean for the location parameters.
 
-    Parameters:
-    -----------
-    gamma_hat : ndarray of shape (d)
-        Estimated gamma values.
-    gamma_bar : ndarray of shape (d)
-        Mean gamma values.
-    n : int
-        Number of observations.
-    delta_star : float
-        Delta star value.
-    tau_2 : ndarray of shape (d)
-        Tau squared values.
+    Parameters
+    ----------
+    gamma_hat : ndarray of shape (n_domains, n_features)
+        Least-squares estimates of the domain-specific location parameters.
+    gamma_bar : ndarray of shape (n_domains,)
+        Mean location parameters across domains.
+    n : ndarray of shape (n_domains, n_features)
+        Number of observations per domain and feature.
+    delta_star : ndarray of shape (n_domains, n_features)
+        Current estimate of the posterior scale parameters.
+    tau_2 : ndarray of shape (n_domains,)
+        Prior variances of the location parameters.
 
-    Returns:
-    --------
-    gamma_hat: ndarray of shape (d)
-        The calculated posterior mean.
-
+    Returns
+    -------
+    gamma_star : ndarray of shape (n_domains, n_features)
+        Posterior mean of the location parameters.
     """
 
     tau_2 = tau_2.reshape(-1, 1)
@@ -84,22 +83,23 @@ def _postmean(gamma_hat, gamma_bar, n, delta_star, tau_2):
 
 
 def _postvar(ssr, n, a_prior, b_prior):
-    """
-    Calculate the posterior variance.
-    Parameters:
-    -----------
-    ssr : ndarray
-        The sum of squared residuals.
-    n : int
-        The number of observations.
-    a_prior : ndarray
-        The prior shape parameter.
-    b_prior : ndarray
-        The prior scale parameter.
-    Returns:
-    --------
-    delta_hat: ndarray
-        The posterior variance.
+    """Compute the posterior variance for the scale parameters.
+
+    Parameters
+    ----------
+    ssr : ndarray of shape (n_domains, n_features)
+        Sum of squared residuals per feature and domain.
+    n : ndarray of shape (n_domains, n_features)
+        Number of observations per domain and feature.
+    a_prior : ndarray of shape (n_domains,)
+        Shape parameters of the inverse-gamma prior.
+    b_prior : ndarray of shape (n_domains,)
+        Scale parameters of the inverse-gamma prior.
+
+    Returns
+    -------
+    delta_star : ndarray of shape (n_domains, n_features)
+        Posterior variance estimates for each domain.
     """
 
     a_prior = a_prior.reshape(-1, 1)
@@ -108,6 +108,23 @@ def _postvar(ssr, n, a_prior, b_prior):
 
 
 class ComBat(OneToOneFeatureMixin, BaseAdapter):
+    """Harmonize features across domains via the ComBat algorithm.
+
+    The estimator implements a domain-adaptation variant of ComBat, combining
+    empirical Bayes location and scale adjustments with optional covariates.
+    Domains are encoded through metadata passed via ``domains`` and covariates
+    through ``covariates``.
+
+    Parameters
+    ----------
+    max_iter : int, default=100
+        Maximum number of iterations for the empirical Bayes updates.
+    tol : float, default=1e-4
+        Tolerance for convergence of the empirical Bayes updates.
+    copy : bool, default=True
+        If ``False``, try to perform in-place operations when possible.
+    """
+
     _parameter_constraints = {
         "max_iter": [Interval(Integral, 1, None, closed="left")],
         "tol": [Interval(Real, 0, None, closed="left")],
@@ -120,6 +137,7 @@ class ComBat(OneToOneFeatureMixin, BaseAdapter):
         self.copy = copy
 
     def _fit_standardization_parameters(self, X, D, domains_counts):
+        """Estimate grand mean and pooled variance used for standardization."""
         domains_ratio = domains_counts / domains_counts.sum()
 
         n_samples = X.shape[0]
@@ -139,6 +157,7 @@ class ComBat(OneToOneFeatureMixin, BaseAdapter):
         self.pooled_var_ = pooled_var
 
     def _standardize(self, X, D):
+        """Center and scale the data using fitted standardization parameters."""
         n_domains = len(self.domains_)
         pooled_std = np.sqrt(self.pooled_var_)
 
@@ -158,6 +177,7 @@ class ComBat(OneToOneFeatureMixin, BaseAdapter):
         return X_std, X_bar
 
     def _fit_ls_parameters(self, X, D, domains):
+        """Fit least-squares estimates of domain-specific parameters."""
         n_domains = len(self.domains_)
 
         # Do least square to find a linear transformation
@@ -183,6 +203,7 @@ class ComBat(OneToOneFeatureMixin, BaseAdapter):
         a_prior,
         b_prior,
     ):
+        """Iteratively estimate empirical Bayes adjustments for each domain."""
         max_domain_samples = domains_counts.max()
         n_domains = len(self.domains_)
         d_features = X.shape[1]
@@ -225,6 +246,7 @@ class ComBat(OneToOneFeatureMixin, BaseAdapter):
         self.delta_star_ = delta_hat_new
 
     def _adjust(self, X, D, X_bar, domains):
+        """Apply empirical Bayes adjustments and reverse standardization."""
         n_domains = len(self.domains_)
         pooled_std = np.sqrt(self.pooled_var_)
         delta_star_sqrt = np.sqrt(self.delta_star_)
@@ -250,6 +272,24 @@ class ComBat(OneToOneFeatureMixin, BaseAdapter):
 
     @_fit_context(prefer_skip_nested_validation=True)
     def fit(self, X, y=None, domains=None, covariates=None):
+        """Estimate ComBat harmonization parameters.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Training data.
+        y : Ignored
+            Not used, present for API compatibility.
+        domains : array-like of shape (n_samples,)
+            Domain labels for each sample. Required.
+        covariates : array-like of shape (n_samples, n_covariates), default=None
+            Optional covariates to regress out during harmonization.
+
+        Returns
+        -------
+        self : object
+            Fitted estimator.
+        """
         # Validate (and cast) input data
         X = validate_data(self, X, copy=self.copy)
         domains, domains_ohe = self._validate_domains(domains, X, required=True, return_value="both")
@@ -288,6 +328,23 @@ class ComBat(OneToOneFeatureMixin, BaseAdapter):
         return self
 
     def transform(self, X, domains=None, covariates=None):
+        """Harmonize new samples using the fitted parameters.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Input data to harmonize.
+        domains : array-like of shape (n_samples,)
+            Domain labels for each sample. Required.
+        covariates : array-like of shape (n_samples, n_covariates), default=None
+            Covariates to align with the fitted model. Required when used at
+            fit time.
+
+        Returns
+        -------
+        X_new : ndarray of shape (n_samples, n_features)
+            Harmonized data.
+        """
         check_is_fitted(self)
         # Validate (and cast) input data
         X = validate_data(self, X, copy=self.copy)
