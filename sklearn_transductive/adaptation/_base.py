@@ -11,6 +11,8 @@ __all__ = ["AdapterMixin", "BaseAdapter"]
 
 
 class AdapterMixin(DomainValidationMixin, CovariateValidationMixin, _SetOutputMixin):
+    """Mixin providing domain/covariate validation and ``fit_transform``."""
+
     def fit_transform(self, X, y=None, domains=None, covariates=None, **fit_params):
         """
         Fit to data, then transform it.
@@ -79,6 +81,8 @@ class AdapterMixin(DomainValidationMixin, CovariateValidationMixin, _SetOutputMi
 
 
 class BaseAdapter(AdapterMixin, BaseEstimator):
+    """Base class for adaptation estimators handling metadata routing."""
+
     # TODO: Add default metadata requests
     __metadata_request__fit = {"domains": True, "covariates": True}
     __metadata_request__transform = {"domains": True, "covariates": True}
@@ -86,6 +90,27 @@ class BaseAdapter(AdapterMixin, BaseEstimator):
     __metadata_request__inverse_transform = {"domains": True, "covariates": True}
 
     def _augment(self, X=None, domains=None, covariates=None):
+        """Column-stack available inputs into a single design matrix.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features), default=None
+            Feature matrix provided by the caller.
+        domains : array-like of shape (n_samples,) or (n_samples, n_domains), default=None
+            Encoded domain information to append to the feature matrix.
+        covariates : array-like of shape (n_samples, n_covariates), default=None
+            Additional metadata to append after the domains.
+
+        Returns
+        -------
+        ndarray of shape (n_samples, n_augmented_features)
+            Concatenated view of the supplied inputs.
+
+        Raises
+        ------
+        ValueError
+            If none of ``X``, ``domains`` or ``covariates`` is provided.
+        """
         fn = lambda item: item is not None  # noqa: E731
         A = tuple(filter(fn, (X, domains, covariates)))
 
