@@ -2,7 +2,7 @@
 
 Utilities that extend scikit-learn with a focus on transductive learning and domain adaptation workflows.
 
-The project mirrors the public scikit-learn API whenever possible so that your existing estimators, pipelines, and model selection routines keep working. Extra utilities such as an Optuna-backed search CV, harmonization helpers, and targeted cross-validation strategies are layered on top to make domain adaptation experiments easier to run.
+The project mirrors the public scikit-learn API whenever possible so that your existing estimators, pipelines, and model selection routines keep working. Extra utilities such as an search CV, harmonization helpers, and targeted cross-validation strategies are layered on top to make domain adaptation experiments easier to run.
 
 ## Installation
 
