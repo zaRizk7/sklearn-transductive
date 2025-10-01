@@ -955,8 +955,9 @@ class BaseSearchCV(MetaEstimatorMixin, BaseEstimator, metaclass=ABCMeta):
 
                 if self.verbose > 0:
                     print(
-                        "Fitting {0} folds for each of {1} candidates,"
-                        " totalling {2} fits".format(n_splits, n_candidates, n_candidates * n_splits)
+                        "Fitting {0} folds for each of {1} candidates," " totalling {2} fits".format(
+                            n_splits, n_candidates, n_candidates * n_splits
+                        )
                     )
 
                 out = parallel(
