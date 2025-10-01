@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.base import BaseEstimator, _fit_context
 from sklearn.preprocessing import FunctionTransformer
-from sklearn.utils import _safe_indexing, get_tags, safe_mask
+from sklearn.utils import _safe_indexing, get_tags
 from sklearn.utils._metadata_requests import (
     MetadataRouter,
     MethodMapping,
@@ -26,6 +26,21 @@ __all__ = ["SupervisedOnlyEstimator"]
 # unlabeled data in the middle of the pipeline with a transformation
 # that may have transductive properties.
 class SupervisedOnlyEstimator(BaseEstimator):
+    """Wrap an estimator to ignore unlabeled samples when fitting.
+
+    Samples whose target equals ``-1`` are skipped during :meth:`fit` while the
+    other methods are transparently delegated to the wrapped estimator. This is
+    useful in composite models that may temporarily introduce unlabeled
+    observations but still rely on purely supervised components downstream.
+
+    Parameters
+    ----------
+    estimator : estimator object, default=FunctionTransformer()
+        Estimator implementing at least a ``fit`` method. Any additional
+        methods (for example ``transform`` or ``predict``) will be delegated to
+        this estimator when available.
+    """
+
     _parameter_constraints: dict = {"estimator": [HasMethods(["fit"])]}
 
     def __init__(self, estimator=FunctionTransformer()):
@@ -33,6 +48,15 @@ class SupervisedOnlyEstimator(BaseEstimator):
 
     @property
     def classes_(self):
+        """Class labels encountered during :meth:`fit`.
+
+        Returns
+        -------
+        ndarray of shape (n_classes,)
+            Class labels exposed by the wrapped estimator. The attribute is
+            available whenever the underlying estimator defines ``classes_``
+            after fitting.
+        """
         check_is_fitted(self)
         return self.estimator.classes_
 
@@ -58,7 +82,8 @@ class SupervisedOnlyEstimator(BaseEstimator):
         mapper.add(caller="predict_log_proba", callee="predict_log_proba")
         mapper.add(caller="decision_function", callee="decision_function")
         mapper.add(caller="score", callee="score")
-        mapper.add(caller="score_samples", callee="score_samples")
+        if hasattr(self.estimator, "score_samples"):
+            mapper.add(caller="score_samples", callee="score_samples")
         router.add(estimator=self.estimator, method_mapping=mapper)
         return router
 
@@ -75,6 +100,23 @@ class SupervisedOnlyEstimator(BaseEstimator):
 
     @_fit_context(prefer_skip_nested_validation=True)
     def fit(self, X, y=None, **params):
+        """Fit the wrapped estimator using labeled samples only.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Training input samples.
+        y : array-like of shape (n_samples,), default=None
+            Target values. Samples with ``y == -1`` are treated as unlabeled and
+            ignored when fitting the wrapped estimator.
+        **params : dict
+            Additional parameters to pass to :meth:`estimator.fit`.
+
+        Returns
+        -------
+        self : object
+            Fitted estimator.
+        """
         routed_params = self._process_routing(params, "fit")
         X, y = validate_data(self, X, y, accept_sparse=True)
 
@@ -88,6 +130,20 @@ class SupervisedOnlyEstimator(BaseEstimator):
 
     @available_if(subestimator_has("estimator", "transform"))
     def transform(self, X, **params):
+        """Transform X using the wrapped estimator.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Input samples.
+        **params : dict
+            Additional parameters to pass to :meth:`estimator.transform`.
+
+        Returns
+        -------
+        X_new : ndarray of shape (n_samples, n_features_transformed)
+            Transformed samples as returned by the wrapped estimator.
+        """
         check_is_fitted(self)
         routed_params = self._process_routing(params, "transform")
         X = validate_data(self, X, accept_sparse=True, reset=False)
@@ -95,11 +151,43 @@ class SupervisedOnlyEstimator(BaseEstimator):
 
     @available_if(subestimator_has("estimator", "inverse_transform"))
     def inverse_transform(self, X, **params):
+        """Apply the inverse transformation of the wrapped estimator.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features_transformed)
+            Input samples in the transformed space.
+        **params : dict
+            Additional parameters to pass to
+            :meth:`estimator.inverse_transform`.
+
+        Returns
+        -------
+        X_original : ndarray of shape (n_samples, n_features)
+            Inverse transformed samples.
+        """
         check_is_fitted(self)
         routed_params = self._process_routing(params, "inverse_transform")
         return self.estimator.inverse_transform(X, **routed_params)
 
     def fit_transform(self, X, y=None, **params):
+        """Fit to data, then transform it.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Training input samples.
+        y : array-like of shape (n_samples,), default=None
+            Target values. Samples with ``y == -1`` are ignored during fitting.
+        **params : dict
+            Additional parameters routed to both :meth:`fit` and
+            :meth:`transform` when supported.
+
+        Returns
+        -------
+        X_new : ndarray of shape (n_samples, n_features_transformed)
+            Transformed samples as produced by the wrapped estimator.
+        """
         if y is None:
             self.fit(X, **params)
         else:
@@ -108,6 +196,20 @@ class SupervisedOnlyEstimator(BaseEstimator):
 
     @available_if(subestimator_has("estimator", "predict"))
     def predict(self, X, **params):
+        """Predict target values for X using the wrapped estimator.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Input samples.
+        **params : dict
+            Additional parameters to pass to :meth:`estimator.predict`.
+
+        Returns
+        -------
+        y_pred : ndarray of shape (n_samples,)
+            Predicted target values.
+        """
         check_is_fitted(self)
         routed_params = self._process_routing(params, "predict")
         X = validate_data(self, X, accept_sparse=True, reset=False)
@@ -115,6 +217,20 @@ class SupervisedOnlyEstimator(BaseEstimator):
 
     @available_if(subestimator_has("estimator", "predict_proba"))
     def predict_proba(self, X, **params):
+        """Estimate class probabilities for X using the wrapped estimator.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Input samples.
+        **params : dict
+            Additional parameters to pass to :meth:`estimator.predict_proba`.
+
+        Returns
+        -------
+        y_prob : ndarray of shape (n_samples, n_classes)
+            Predicted class probabilities.
+        """
         check_is_fitted(self)
         routed_params = self._process_routing(params, "predict_proba")
         X = validate_data(self, X, accept_sparse=True, reset=False)
@@ -122,6 +238,21 @@ class SupervisedOnlyEstimator(BaseEstimator):
 
     @available_if(subestimator_has("estimator", "predict_log_proba"))
     def predict_log_proba(self, X, **params):
+        """Estimate log-probabilities for X using the wrapped estimator.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Input samples.
+        **params : dict
+            Additional parameters to pass to
+            :meth:`estimator.predict_log_proba`.
+
+        Returns
+        -------
+        y_log_prob : ndarray of shape (n_samples, n_classes)
+            Predicted log-probabilities of each class.
+        """
         check_is_fitted(self)
         routed_params = self._process_routing(params, "predict_log_proba")
         X = validate_data(self, X, accept_sparse=True, reset=False)
@@ -129,6 +260,21 @@ class SupervisedOnlyEstimator(BaseEstimator):
 
     @available_if(subestimator_has("estimator", "decision_function"))
     def decision_function(self, X, **params):
+        """Compute the decision function of X using the wrapped estimator.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Input samples.
+        **params : dict
+            Additional parameters to pass to
+            :meth:`estimator.decision_function`.
+
+        Returns
+        -------
+        scores : ndarray of shape (n_samples,) or (n_samples, n_classes)
+            Decision function values as returned by the wrapped estimator.
+        """
         check_is_fitted(self)
         routed_params = self._process_routing(params, "decision_function")
         X = validate_data(self, X, accept_sparse=True, reset=False)
@@ -136,6 +282,22 @@ class SupervisedOnlyEstimator(BaseEstimator):
 
     @available_if(subestimator_has("estimator", "score"))
     def score(self, X, y=None, **params):
+        """Score the wrapped estimator on the given test data.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Test samples.
+        y : array-like of shape (n_samples,), default=None
+            True labels for ``X``.
+        **params : dict
+            Additional parameters to pass to :meth:`estimator.score`.
+
+        Returns
+        -------
+        score : float
+            Score returned by the wrapped estimator.
+        """
         check_is_fitted(self)
         routed_params = self._process_routing(params, "score")
         X, y = validate_data(self, X, y, accept_sparse=True, reset=False)
@@ -143,6 +305,20 @@ class SupervisedOnlyEstimator(BaseEstimator):
 
     @available_if(subestimator_has("estimator", "score_samples"))
     def score_samples(self, X, **params):
+        """Compute the score samples of X using the wrapped estimator.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Input samples.
+        **params : dict
+            Additional parameters to pass to :meth:`estimator.score_samples`.
+
+        Returns
+        -------
+        scores : ndarray of shape (n_samples,)
+            Point-wise scores as returned by the wrapped estimator.
+        """
         check_is_fitted(self)
         routed_params = self._process_routing(params, "score_samples")
         X = validate_data(self, X, accept_sparse=True, reset=False)
