@@ -19,22 +19,12 @@ repos:
       - id: check-yaml
         exclude: .conda/meta.yaml
       - id: requirements-txt-fixer
-  - repo: https://github.com/pycqa/flake8.git
-    rev: 7.2.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
     hooks:
-      - id: flake8
-        additional_dependencies: [Flake8-pyproject]
-  - repo: https://github.com/psf/black
-    rev: 25.1.0
-    hooks:
-      - id: black
-        language_version: python3
-        additional_dependencies: [click==8.0.4]
-  - repo: https://github.com/pycqa/isort
-    rev: 6.0.1
-    hooks:
-      - id: isort
-        name: isort
+      - id: ruff
+        args: ["--fix", "--exit-non-zero-on-fix"]
+      - id: ruff-format
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.15.0
     hooks:
